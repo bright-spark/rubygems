@@ -136,8 +136,7 @@ class Gem::Security::Signer
   # be saved as ~/.gem/gem-public_cert.pem.expired.%Y%m%d%H%M%S where the
   # expiry time (not after) is used for the timestamp.
 
-  def re_sign_key # :nodoc:
-    old_cert = @cert_chain.last
+  def re_sign_key(old_cert = @cert_chain.last, key = @key) # :nodoc:
 
     disk_cert_path = File.join(Gem.default_cert_path)
     disk_cert = File.read(disk_cert_path) rescue nil
@@ -148,7 +147,7 @@ class Gem::Security::Signer
 
     return unless disk_key
 
-    if disk_key.to_pem == @key.to_pem && disk_cert == old_cert.to_pem
+    if disk_key.to_pem == key.to_pem && disk_cert == old_cert.to_pem
       expiry = old_cert.not_after.strftime('%Y%m%d%H%M%S')
       old_cert_file = "gem-public_cert.pem.expired.#{expiry}"
       old_cert_path = File.join(Gem.user_home, ".gem", old_cert_file)
@@ -156,7 +155,7 @@ class Gem::Security::Signer
       unless File.exist?(old_cert_path)
         Gem::Security.write(old_cert, old_cert_path)
 
-        cert = Gem::Security.re_sign(old_cert, @key)
+        cert = Gem::Security.re_sign(old_cert, key)
 
         Gem::Security.write(cert, disk_cert_path)
 
