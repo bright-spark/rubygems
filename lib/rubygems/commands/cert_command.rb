@@ -89,6 +89,12 @@ class Gem::Commands::CertCommand < Gem::Command
                'Days before the certificate expires') do |days, options|
       options[:expiration_length_days] = days.to_i
     end
+
+    add_option('-R', '--resign CERT_PATH KEY_PATH',
+               'Try to re-sign a given expired cert with a given key') do |cert_path, key_path|
+      options[:expired_cert] = cert_path
+      options[:cert_key] = key_path
+    end
   end
 
   def add_certificate certificate # :nodoc:
