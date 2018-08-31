@@ -90,10 +90,9 @@ class Gem::Commands::CertCommand < Gem::Command
       options[:expiration_length_days] = days.to_i
     end
 
-    add_option('-R', '--resign CERT_PATH KEY_PATH',
-               'Try to re-sign a given expired cert with a given key') do |cert_path, key_path|
-      options[:expired_cert] = cert_path
-      options[:cert_key] = key_path
+    add_option('-R', '--re-sign',
+               'Try to resign a certificate --cert with key --private-key') do |resign, options|
+      options[:resign] = resign
     end
   end
 
@@ -118,6 +117,13 @@ class Gem::Commands::CertCommand < Gem::Command
 
     options[:build].each do |email|
       build email
+    end
+
+    if options[:resign]
+      key = options[:key]
+      cert = options[:issuer_cert]
+
+      re_sign_cert(cert, key)
     end
 
     sign_certificates unless options[:sign].empty?
@@ -294,6 +300,11 @@ For further reading on signing gems see `ri Gem::Security`.
     options[:sign].each do |cert_file|
       sign cert_file
     end
+  end
+
+  def re_sign_cert(cert, private_key)
+    signer = Gem::Security::Signer.new(private_key, [cert])
+    signer.re_sign_specific_key
   end
 
   private

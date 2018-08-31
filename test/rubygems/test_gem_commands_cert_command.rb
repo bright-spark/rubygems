@@ -9,14 +9,16 @@ end
 class TestGemCommandsCertCommand < Gem::TestCase
 
   ALTERNATE_CERT = load_cert 'alternate'
+  EXPIRED_PUBLIC_CERT = load_cert 'expired'
 
   ALTERNATE_KEY_FILE = key_path 'alternate'
   PRIVATE_KEY_FILE   = key_path 'private'
   PUBLIC_KEY_FILE    = key_path 'public'
 
-  ALTERNATE_CERT_FILE = cert_path 'alternate'
-  CHILD_CERT_FILE     = cert_path 'child'
-  PUBLIC_CERT_FILE    = cert_path 'public'
+  ALTERNATE_CERT_FILE      = cert_path 'alternate'
+  CHILD_CERT_FILE          = cert_path 'child'
+  PUBLIC_CERT_FILE         = cert_path 'public'
+  EXPIRED_PUBLIC_CERT_FILE = cert_path 'expired'
 
   def setup
     super
@@ -580,6 +582,31 @@ ERROR:  --private-key not specified and ~/.gem/gem-private_key.pem does not exis
     EXPECTED
 
     assert_equal expected, @ui.error
+  end
+
+  def test_execute_re_sign
+    Dir.mkdir File.join Gem.user_home, ".gem"
+
+    path = File.join @tempdir, 'cert.pem'
+    Gem::Security.write EXPIRED_PUBLIC_CERT, path, 0600
+
+    assert_equal '/CN=nobody/DC=example', EXPIRED_PUBLIC_CERT.issuer.to_s
+
+    @cmd.handle_options %W[
+      --private-key #{PRIVATE_KEY_FILE}
+      --certificate #{EXPIRED_PUBLIC_CERT_FILE}
+      --re-sign
+    ]
+
+    use_ui @ui do
+      @cmd.execute
+    end
+
+    assert_match(
+      /INFO:  Your expired cert will be located at: \/tmp\/test_rubygems_[0-9]+\/userhome\/\.gem\/gem\-public_cert\.pem\.expired\.[0-9]+\n/,
+      @ui.output
+    )
+    assert_equal '', @ui.error
   end
 
   def test_handle_options
