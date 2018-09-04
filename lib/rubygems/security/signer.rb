@@ -30,6 +30,36 @@ class Gem::Security::Signer
   attr_reader :digest_name # :nodoc:
 
   ##
+  # Attemps to re-sign an expired cert with a given private key
+  def self.re_sign_key(cert_path, private_key_path)
+    unless File.exist?(cert_path)
+      raise Gem::Security::Exception, "certificate: #{cert_path} does not exist"
+    end
+
+    unless File.exist?(private_key_path)
+      raise Gem::Security::Exception, "key: #{private_key} does not exist"
+    end
+
+    key = OpenSSL::PKey::RSA.new(File.read(private_key_path))
+
+    expired_cert = OpenSSL::X509::Certificate.new(File.read(cert_path))
+
+    return unless expired_cert.not_after < Time.now
+
+    expiry = old_cert.not_after.strftime('%Y%m%d%H%M%S')
+    expired_cert_file = "#{File.basename(cert_path)}.expired.#{expiry}"
+    expired_cert_path = File.join(Gem.user_home, ".gem", expired_cert_file)
+
+    Gem::Security.write(expired_cert, expired_cert_path)
+
+    re_signed_cert = Gem::Security.re_sign(expired_cert, key)
+
+    Gem::Security.write(re_signed_cert, cert_path)
+
+    yield(cert_path, expired_cert_path) if block_given?
+  end
+
+  ##
   # Creates a new signer with an RSA +key+ or path to a key, and a certificate
   # +chain+ containing X509 certificates, encoding certificates or paths to
   # certificates.
@@ -164,28 +194,6 @@ class Gem::Security::Signer
 
         @cert_chain = [cert]
       end
-    end
-  end
-
-  def re_sign_specific_key
-
-    old_cert = @cert_chain.last
-    key = @key
-
-    return unless old_cert.not_after < Time.now
-
-    expiry = old_cert.not_after.strftime('%Y%m%d%H%M%S')
-    old_cert_file = "gem-public_cert.pem.expired.#{expiry}"
-    old_cert_path = File.join(Gem.user_home, ".gem", old_cert_file)
-
-    unless File.exist?(old_cert_path)
-      Gem::Security.write(old_cert, old_cert_path)
-
-      cert = Gem::Security.re_sign(old_cert, key)
-
-      Gem::Security.write(cert, old_cert_path)
-
-      alert("Your expired cert will be located at: #{old_cert_path}")
     end
   end
 

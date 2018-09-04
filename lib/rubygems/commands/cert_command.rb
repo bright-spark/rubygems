@@ -123,7 +123,7 @@ class Gem::Commands::CertCommand < Gem::Command
       key = options[:key]
       cert = options[:issuer_cert]
 
-      re_sign_cert(cert, key)
+      re_sign_key_file(cert, key)
     end
 
     sign_certificates unless options[:sign].empty?
@@ -302,9 +302,13 @@ For further reading on signing gems see `ri Gem::Security`.
     end
   end
 
-  def re_sign_cert(cert, private_key)
-    signer = Gem::Security::Signer.new(private_key, [cert])
-    signer.re_sign_specific_key
+  def re_sign_key_file(cert, private_key)
+    puts "cert class: #{cert.class}"
+
+    Gem::Security::Signer.re_sign_key_file(cert, private_key) do |cert_path, expired_cert_path|
+      alert("Your cert #{cert_path} has been re-signed")
+      alert("Your expired cert will be located at: #{expired_cert_path}")
+    end
   end
 
   private
