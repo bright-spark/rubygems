@@ -96,7 +96,6 @@ class Gem::Commands::CertCommand < Gem::Command
 
     add_option('-R', '--re-sign',
                'Re-sign the certificate from -C with the key from -K') do |resign, options|
-
       options[:resign] = resign
     end
   end
