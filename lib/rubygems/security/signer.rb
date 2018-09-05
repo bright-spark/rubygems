@@ -32,7 +32,6 @@ class Gem::Security::Signer
   ##
   # Attemps to re-sign an expired cert with a given private key
   def self.re_sign_cert(cert_path, private_key_path)
-    p "cert_path: #{cert_path}"
     unless File.exist?(cert_path)
       raise Gem::Security::Exception, "certificate: #{cert_path} does not exist"
     end

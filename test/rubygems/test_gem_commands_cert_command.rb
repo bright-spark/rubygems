@@ -585,16 +585,20 @@ ERROR:  --private-key not specified and ~/.gem/gem-private_key.pem does not exis
   end
 
   def test_execute_re_sign
-    Dir.mkdir File.join Gem.user_home, ".gem"
+    gem_path = File.join Gem.user_home, ".gem"
+    Dir.mkdir gem_path
 
     path = File.join @tempdir, 'cert.pem'
     Gem::Security.write EXPIRED_PUBLIC_CERT, path, 0600
 
     assert_equal '/CN=nobody/DC=example', EXPIRED_PUBLIC_CERT.issuer.to_s
 
+    tmp_expired_cert_file = File.join("/tmp", File.basename(EXPIRED_PUBLIC_CERT_FILE))
+    File.write(tmp_expired_cert_file, File.read(EXPIRED_PUBLIC_CERT_FILE))
+
     @cmd.handle_options %W[
       --private-key #{PRIVATE_KEY_FILE}
-      --certificate #{EXPIRED_PUBLIC_CERT_FILE}
+      --certificate #{tmp_expired_cert_file}
       --re-sign
     ]
 
@@ -602,8 +606,16 @@ ERROR:  --private-key not specified and ~/.gem/gem-private_key.pem does not exis
       @cmd.execute
     end
 
+    expected_path = File.join(gem_path, "#{File.basename(tmp_expired_cert_file)}.expired")
+
+    #Assert_match(
+    #  "INFO:  Your cert #{tmp_expired_cert_file} has been re-signed",
+#INFO:  Your expired cert will be located at: #{expected_path}\.[0-9]+},
+    #  @ui.output
+    #)
+
     assert_match(
-      /INFO:  Your expired cert will be located at: \/tmp\/test_rubygems_[0-9]+\/userhome\/\.gem\/gem\-public_cert\.pem\.expired\.[0-9]+\n/,
+      /INFO:  Your cert #{tmp_expired_cert_file} has been re-signed\nINFO:  Your expired cert will be located at: #{expected_path}\.[0-9]+/,
       @ui.output
     )
     assert_equal '', @ui.error
