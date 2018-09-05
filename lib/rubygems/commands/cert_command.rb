@@ -15,6 +15,8 @@ class Gem::Commands::CertCommand < Gem::Command
           :add => [], :remove => [], :list => [], :build => [], :sign => []
 
     OptionParser.accept OpenSSL::X509::Certificate do |certificate|
+      @certificate_file = certificate
+
       begin
         OpenSSL::X509::Certificate.new File.read certificate
       rescue Errno::ENOENT
@@ -26,6 +28,8 @@ class Gem::Commands::CertCommand < Gem::Command
     end
 
     OptionParser.accept OpenSSL::PKey::RSA do |key_file|
+      @key_file = key_file
+
       begin
         passphrase = ENV['GEM_PRIVATE_KEY_PASSPHRASE']
         key = OpenSSL::PKey::RSA.new File.read(key_file), passphrase
@@ -91,7 +95,8 @@ class Gem::Commands::CertCommand < Gem::Command
     end
 
     add_option('-R', '--re-sign',
-               'Try to resign a certificate --cert with key --private-key') do |resign, options|
+               'Re-sign the certificate from -C with the key from -K') do |resign, options|
+
       options[:resign] = resign
     end
   end
@@ -120,10 +125,7 @@ class Gem::Commands::CertCommand < Gem::Command
     end
 
     if options[:resign]
-      key = options[:key]
-      cert = options[:issuer_cert]
-
-      re_sign_key_file(cert, key)
+      re_sign_cert(@certificate_file, @key_file)
     end
 
     sign_certificates unless options[:sign].empty?
@@ -302,10 +304,8 @@ For further reading on signing gems see `ri Gem::Security`.
     end
   end
 
-  def re_sign_key_file(cert, private_key)
-    puts "cert class: #{cert.class}"
-
-    Gem::Security::Signer.re_sign_key_file(cert, private_key) do |cert_path, expired_cert_path|
+  def re_sign_cert(cert, private_key)
+    Gem::Security::Signer.re_sign_cert(cert, private_key) do |cert_path, expired_cert_path|
       alert("Your cert #{cert_path} has been re-signed")
       alert("Your expired cert will be located at: #{expired_cert_path}")
     end

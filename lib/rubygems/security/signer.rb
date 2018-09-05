@@ -31,7 +31,8 @@ class Gem::Security::Signer
 
   ##
   # Attemps to re-sign an expired cert with a given private key
-  def self.re_sign_key(cert_path, private_key_path)
+  def self.re_sign_cert(cert_path, private_key_path)
+    p "cert_path: #{cert_path}"
     unless File.exist?(cert_path)
       raise Gem::Security::Exception, "certificate: #{cert_path} does not exist"
     end
@@ -46,7 +47,7 @@ class Gem::Security::Signer
 
     return unless expired_cert.not_after < Time.now
 
-    expiry = old_cert.not_after.strftime('%Y%m%d%H%M%S')
+    expiry = expired_cert.not_after.strftime('%Y%m%d%H%M%S')
     expired_cert_file = "#{File.basename(cert_path)}.expired.#{expiry}"
     expired_cert_path = File.join(Gem.user_home, ".gem", expired_cert_file)
 
@@ -166,7 +167,9 @@ class Gem::Security::Signer
   # be saved as ~/.gem/gem-public_cert.pem.expired.%Y%m%d%H%M%S where the
   # expiry time (not after) is used for the timestamp.
 
-  def re_sign_key(old_cert = @cert_chain.last, key = @key) # :nodoc:
+  def re_sign_key # :nodoc:
+    old_cert = @cert_chain.last
+    key = @key
 
     disk_cert_path = File.join(Gem.default_cert_path)
     disk_cert = File.read(disk_cert_path) rescue nil
